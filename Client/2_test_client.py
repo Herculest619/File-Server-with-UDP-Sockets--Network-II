@@ -1,4 +1,4 @@
-import socket, sys, os
+import socket, sys, os, time
 
 HOST = '127.0.0.1'  # endereço IP
 PORT = 1999         # Porta utilizada pelo servidor
@@ -20,11 +20,11 @@ def receber_arquivo(UDPClientSocket, file_path):
 
             # Escreve os dados no arquivo
             arquivo.write(dados)
-            print(f"Pacote {expected_seq_num} recebido")
+            #print(f"Pacote {expected_seq_num} recebido")
 
             # Envia ACK
             UDPClientSocket.sendto(str(expected_seq_num).encode(), (HOST, PORT))
-            print(f"ACK enviado: {expected_seq_num}")
+            #print(f"ACK enviado: {expected_seq_num}")
             expected_seq_num += 1
 
 def main(argv):
@@ -52,8 +52,13 @@ def main(argv):
             print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
 
     except Exception as error:
-        print("Exceção - Programa será encerrado!")
+        print("Exceção - Reconectando ao servidor...")
         print(error)
+        # Espera 1 segundo para tentar rodar o programa novamente
+        time.sleep(1)
+        # Limapa a tela
+        os.system('cls' if os.name == 'nt' else 'clear')
+        main(argv)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

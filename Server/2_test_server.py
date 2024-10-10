@@ -1,4 +1,4 @@
-import socket, sys, os
+import socket, sys, os, random
 from threading import Thread
 
 HOST = '127.0.0.1'  # endereço IP
@@ -26,8 +26,13 @@ def enviar_pacotes(UDPServerSocket, endereco, caminho_arquivo):
         while base < total_pacotes:
             # Envia pacotes dentro da janela
             while next_seq_num < base + WINDOW_SIZE and next_seq_num < total_pacotes:
-                UDPServerSocket.sendto(pacotes[next_seq_num], endereco)
-                print(f"Enviando pacote {next_seq_num}")
+                # Simula a chance de perda de 5%
+                if random.random() > 0.05:  # 95% de chance de enviar o pacote
+                    UDPServerSocket.sendto(pacotes[next_seq_num], endereco)
+                    print(f"Enviando pacote {next_seq_num}")
+                else:
+                    print(f"Perda do pacote {next_seq_num} simulada")
+                
                 next_seq_num += 1
 
             try:

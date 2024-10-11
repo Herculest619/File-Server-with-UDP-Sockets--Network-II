@@ -1,7 +1,7 @@
 import socket, os, sys, random
 
 HOST = '127.0.0.1'  # endereço IP
-PORT = 1999         # Porta utilizada pelo servidor
+PORT = 2002         # Porta utilizada pelo servidor
 BUFFER_SIZE = 1460  # tamanho do buffer para recepção dos dados
 TIMEOUT = 0.2       # Timeout de 1 segundo
 

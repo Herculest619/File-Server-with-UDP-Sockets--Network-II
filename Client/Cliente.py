@@ -1,6 +1,4 @@
-import socket
-import sys
-import os
+import socket, os, sys, random
 
 HOST = '127.0.0.1'  # endereço IP
 PORT = 1999        # Porta utilizada pelo servidor
@@ -34,15 +32,21 @@ def main(argv):
 
             with open(file_path, 'wb') as arquivo:
                 while True:
+                    
                     msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)
-                    data = msgFromServer[0]
-                    arquivo.write(data)
+                    # Simula uma perda de pacote de 5%
+                    if random.random() < 0.95:
+                        data = msgFromServer[0]
+                        arquivo.write(data)
 
-                    # Envia um ACK para o servidor
-                    UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
+                        # Envia um ACK para o servidor
+                        UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
 
-                    if len(data) < BUFFER_SIZE:
-                        break
+                        if len(data) < BUFFER_SIZE:
+                            break
+                    else:
+                        print("Falha simula de perda de pacote!")
+
             print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
 
     except Exception as error:

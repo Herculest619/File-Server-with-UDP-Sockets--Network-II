@@ -4,7 +4,7 @@ from threading import Thread
 HOST = '127.0.0.1'  # endereço IP
 PORT = 1999        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1460  # tamanho do buffer para recepção dos dados
-TIMEOUT = 1.0  # Timeout de 1 segundo
+TIMEOUT = 0.2  # Timeout de 1 segundo
 
 def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket):
     # Enviar o arquivo para o cliente, fragmentando em 1460 bytes devido ao tamanho do buffer
@@ -20,8 +20,9 @@ def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket):
                             # Enviar pacote
                             UDPServerSocket.sendto(dados, endereco)
                         else:
-                            print(f"Erro no pacote {i}, reenviando...")
+                            print(f"Falha simulada de envio de pacote {i}")
                             continue
+
                         # Esperar confirmação do cliente
                         try:
                             UDPServerSocket.settimeout(TIMEOUT)  # Timeout de 1 segundo
@@ -31,7 +32,7 @@ def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket):
                                 i += 1
                                 break
                             else:
-                                print(f"Falha ao enviar pacote {i}, reenviando...")
+                                print(f"Falha ao receber ACK do pacote {i}")
                         except socket.timeout:
                             print(f"Timeout no pacote {i}, reenviando...")
             print("\nArquivo enviado com sucesso!!")

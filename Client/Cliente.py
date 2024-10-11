@@ -89,7 +89,7 @@ def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPClientSocket):
 def main(argv):
     try:
         with socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) as UDPClientSocket:
-            opcao = input("\nDeseja baixar ou enviar arquivo?\n 1: DOWNLOAD \n 2: UPLOAD \n").lower()
+            opcao = input("\nDeseja baixar ou enviar arquivo?\n 1: DOWNLOAD \n 2: UPLOAD \n\n").lower()
 
             if opcao == '1':
                 UDPClientSocket.sendto("DOWNLOAD".encode(), (HOST, PORT))
@@ -120,10 +120,8 @@ def main(argv):
                 resposta = resposta.decode()
                 print(resposta)
                 if resposta == "Senha incorreta!":
-                    print("\nSenha incorreta. Conexão encerrada.")
+                    print("Conexão encerrada.\n\n")
                     exit()
-                else:
-                    print("\nSenha correta. Continuando...")
 
                 caminho_atual = os.path.dirname(os.path.abspath(__file__))
                 arquivos = os.listdir(caminho_atual)

@@ -109,6 +109,22 @@ def main(argv):
                 receber_arquivo(UDPClientSocket, file_name)
 
             elif opcao == '2':
+                UDPClientSocket.sendto("UPLOAD".encode(), (HOST, PORT))
+
+                # Pede a senha ao usuário para enviar o arquivo
+                senha = input("\nDigite a senha para enviar o arquivo: ")
+                UDPClientSocket.sendto(senha.encode(), (HOST, PORT))
+
+                # Recebe a resposta do servidor sobre a senha
+                resposta, _ = UDPClientSocket.recvfrom(BUFFER_SIZE)
+                resposta = resposta.decode()
+                print(resposta)
+                if resposta == "Senha incorreta!":
+                    print("\nSenha incorreta. Conexão encerrada.")
+                    exit()
+                else:
+                    print("\nSenha correta. Continuando...")
+
                 caminho_atual = os.path.dirname(os.path.abspath(__file__))
                 arquivos = os.listdir(caminho_atual)
                 arquivos = [arquivo for arquivo in arquivos if not arquivo.endswith('.py')]
@@ -120,7 +136,7 @@ def main(argv):
                 opcao = int(opcao)
                 file_name = arquivos[opcao]
 
-                UDPClientSocket.sendto("UPLOAD".encode(), (HOST, PORT))
+                
                 UDPClientSocket.sendto(file_name.encode(), (HOST, PORT))
                 envia_arquivo(file_name, (HOST, PORT), os.path.join(caminho_atual, file_name), UDPClientSocket) 
 

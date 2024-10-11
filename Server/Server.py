@@ -5,6 +5,7 @@ HOST = '127.0.0.1'
 PORT = 2002
 BUFFER_SIZE = 1460
 TIMEOUT = 0.2
+PASSWORD = "1234"
 
 # Função para calcular o hash MD5 de um arquivo
 def calcular_hash_md5(caminho_arquivo):
@@ -88,7 +89,6 @@ def receber_arquivo(UDPServerSocket, file_name):
     except Exception as e:
         print(f"Erro ao receber o arquivo: {e}")
 
-
 def main(argv):
     try:
         UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -100,6 +100,23 @@ def main(argv):
             endereco = bytesAddressPair[1]
             
             if bytesAddressPair[0].decode() == 'UPLOAD':
+                print(f"\nCliente conectado: {endereco}")
+                # Testa senha recebida validando com a senha do servidor
+                senha, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)    
+                senha = senha.decode()
+                if senha != PASSWORD:
+                    print("Senha incorreta!")
+                    # Retorna para o cliente que a senha está incorreta
+                    UDPServerSocket.sendto("Senha incorreta!".encode(), endereco)
+
+                    print("Encerrando conexão com o cliente...")
+                    # Encerra a conexão com o cliente
+                    UDPServerSocket.close()
+                    break
+
+                print("Senha correta!")
+                UDPServerSocket.sendto("Senha correta!".encode(), endereco)
+
                 nome_arquivo, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
                 nome_arquivo = nome_arquivo.decode()
                 print(f"Cliente deseja enviar o arquivo: {nome_arquivo}")

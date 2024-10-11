@@ -14,67 +14,77 @@ def calcular_hash_md5(caminho_arquivo):
     return md5_hash.hexdigest()
 
 def receber_arquivo(UDPClientSocket, file_name):
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_directory, file_name)
-
-    with open(file_path, 'wb') as arquivo:
-        while True:
-            msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)
-            if random.random() < 0.95:
-                data = msgFromServer[0]
-                arquivo.write(data)
-                UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
-
-                if len(data) < BUFFER_SIZE:
-                    break
-            else:
-                print("Falha simula de perda de pacote!")
-
-        print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
-
-    # Receber e verificar o hash MD5
-    hash_md5_servidor, _ = UDPClientSocket.recvfrom(BUFFER_SIZE)
-    hash_md5_servidor = hash_md5_servidor.decode()
-    print(f"Hash MD5 recebido do servidor: {hash_md5_servidor}")
-
-    # Calcular o hash MD5 do arquivo recebido
-    hash_md5_local = calcular_hash_md5(file_path)
-    print(f"Hash MD5 do arquivo baixado: {hash_md5_local}")
-
-    if hash_md5_servidor == hash_md5_local:
-        print("Verificação concluída com sucesso: os hashes coincidem.")
-    else:
-        print("Falha na verificação: os hashes não coincidem.")
-
-def envia_arquivo(UDPClientSocket, file_name):
     try:
         current_directory = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(current_directory, file_name)
 
-        with open(file_path, 'rb') as arquivo:
+        with open(file_path, 'wb') as arquivo:
+            while True:
+                msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)
+                if random.random() < 0.95:
+                    data = msgFromServer[0]
+                    arquivo.write(data)
+                    UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
+
+                    if len(data) < BUFFER_SIZE:
+                        break
+                else:
+                    print("Falha simulada de perda de pacote!")
+
+            print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
+
+        # Receber e verificar o hash MD5
+        hash_md5_servidor, _ = UDPClientSocket.recvfrom(BUFFER_SIZE)
+        hash_md5_servidor = hash_md5_servidor.decode()
+        print(f"Hash MD5 recebido do servidor: {hash_md5_servidor}")
+
+        # Calcular o hash MD5 do arquivo recebido
+        hash_md5_local = calcular_hash_md5(file_path)
+        print(f"Hash MD5 do arquivo baixado: {hash_md5_local}")
+
+        if hash_md5_servidor == hash_md5_local:
+            print("Verificação concluída com sucesso: os hashes coincidem.\n")
+        else:
+            print("Falha na verificação: os hashes não coincidem.\n")
+    except Exception as e:
+        print(f"Erro ao receber o arquivo: {e}")
+
+def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPClientSocket):
+    try:
+        with open(caminho_arquivo, 'rb') as file:
             i = 0
             while True:
-                dados = arquivo.read(BUFFER_SIZE)
+                dados = file.read(BUFFER_SIZE)
                 if not dados:
                     break
                 while True:
                     if random.random() < 0.95:
-                        UDPClientSocket.sendto(dados, (HOST, PORT))
+                        UDPClientSocket.sendto(dados, endereco)
                     else:
-                        print(f"Simulação de falha de envio do pacote {i}")
+                        print(f"Falha simulada de envio de pacote {i}")
                         continue
 
                     try:
                         UDPClientSocket.settimeout(TIMEOUT)
                         ack, _ = UDPClientSocket.recvfrom(BUFFER_SIZE)
-                        if ack.decode() == 'ACK':
+                        if ack == b'ACK':  # Verificar o ACK como bytes
                             i += 1
                             break
+                        else:
+                            print(f"Falha ao receber ACK do pacote {i}")
                     except socket.timeout:
                         print(f"Timeout no pacote {i}, reenviando...")
-        print(f"\nArquivo '{file_name}' enviado com sucesso!\n")
+
+        print("\nArquivo enviado com sucesso!!")
+        print(f"Foram enviados {i} pacotes\n")
+
+        # Calcular e enviar o hash MD5 do arquivo
+        hash_md5 = calcular_hash_md5(caminho_arquivo)
+        UDPClientSocket.sendto(hash_md5.encode(), endereco)
+        print(f"Hash MD5 do arquivo enviado: {hash_md5}")
     except Exception as e:
         print(f"Erro ao enviar o arquivo: {e}")
+
 
 def main(argv):
     try:
@@ -112,7 +122,7 @@ def main(argv):
 
                 UDPClientSocket.sendto("UPLOAD".encode(), (HOST, PORT))
                 UDPClientSocket.sendto(file_name.encode(), (HOST, PORT))
-                envia_arquivo(UDPClientSocket, file_name)
+                envia_arquivo(file_name, (HOST, PORT), os.path.join(caminho_atual, file_name), UDPClientSocket) 
 
     except Exception as error:
         print("Exceção - Programa será encerrado!")

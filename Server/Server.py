@@ -15,57 +15,79 @@ def calcular_hash_md5(caminho_arquivo):
     return md5_hash.hexdigest()
 
 def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket):
-    with open(caminho_arquivo, 'rb') as file:
-        i = 0
-        while True:
-            dados = file.read(BUFFER_SIZE)
-            if not dados:
-                break
-            while True:
-                if random.random() < 0.95:
-                    UDPServerSocket.sendto(dados, endereco)
-                else:
-                    print(f"Falha simulada de envio de pacote {i}")
-                    continue
-
-                try:
-                    UDPServerSocket.settimeout(TIMEOUT)
-                    ack, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
-                    if ack.decode() == 'ACK':
-                        i += 1
-                        break
-                    else:
-                        print(f"Falha ao receber ACK do pacote {i}")
-                except socket.timeout:
-                    print(f"Timeout no pacote {i}, reenviando...")
-
-    print("\nArquivo enviado com sucesso!!")
-    print(f"Foram enviados {i} pacotes\n")
-
-    # Calcular e enviar o hash MD5 do arquivo
-    hash_md5 = calcular_hash_md5(caminho_arquivo)
-    UDPServerSocket.sendto(hash_md5.encode(), endereco)
-    print(f"Hash MD5 do arquivo enviado: {hash_md5}")
-
-def receber_arquivo(UDPServerSocket, endereco, nome_arquivo):
     try:
-        caminho_atual = os.path.dirname(os.path.abspath(__file__))
-        caminho_arquivo = os.path.join(caminho_atual, nome_arquivo)
-
-        with open(caminho_arquivo, 'wb') as arquivo:
-            while True:
-                dados, addr = UDPServerSocket.recvfrom(BUFFER_SIZE)
-                if random.random() < 0.95:
-                    arquivo.write(dados)
-                    UDPServerSocket.sendto("ACK".encode(), endereco)
-
-                    if len(dados) < BUFFER_SIZE:
+            with open(caminho_arquivo, 'rb') as file:
+                i = 0
+                while True:
+                    dados = file.read(BUFFER_SIZE)
+                    if not dados:
                         break
-                else:
-                    print("Simulação de perda de pacote.")
-        print(f"\nArquivo '{nome_arquivo}' recebido com sucesso!\n")
+                    while True:
+                        if random.random() < 0.95:
+                            UDPServerSocket.sendto(dados, endereco)
+                        else:
+                            print(f"Falha simulada de envio de pacote {i}")
+                            continue
+
+                        try:
+                            UDPServerSocket.settimeout(TIMEOUT)
+                            ack, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
+                            if ack.decode() == 'ACK':
+                                i += 1
+                                break
+                            else:
+                                print(f"Falha ao receber ACK do pacote {i}")
+                        except socket.timeout:
+                            print(f"Timeout no pacote {i}, reenviando...")
+
+            print("\nArquivo enviado com sucesso!!")
+            print(f"Foram enviados {i} pacotes\n")
+
+            # Calcular e enviar o hash MD5 do arquivo
+            hash_md5 = calcular_hash_md5(caminho_arquivo)
+            UDPServerSocket.sendto(hash_md5.encode(), endereco)
+            print(f"Hash MD5 do arquivo enviado: {hash_md5}")
+    except Exception as e:
+        print(f"Erro ao enviar o arquivo: {e}") 
+
+def receber_arquivo(UDPServerSocket, file_name):
+    try:
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_directory, file_name)
+
+        with open(file_path, 'wb') as arquivo:
+            while True:
+                try:
+                    data, endereco = UDPServerSocket.recvfrom(BUFFER_SIZE)
+                    if random.random() < 0.95:
+                        arquivo.write(data)
+                        UDPServerSocket.sendto(b"ACK", endereco)  # Enviar ACK como bytes
+
+                        if len(data) < BUFFER_SIZE:
+                            break
+                    else:
+                        print("Falha simulada de perda de pacote!")
+                except socket.timeout:
+                    print("Timeout na recepção do pacote, aguardando novo pacote...")
+
+            print(f"\nArquivo '{file_name}' recebido com sucesso!\n")
+
+        # Receber e verificar o hash MD5
+        hash_md5_servidor, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
+        hash_md5_servidor = hash_md5_servidor.decode()
+        print(f"Hash MD5 recebido do servidor: {hash_md5_servidor}")
+
+        # Calcular o hash MD5 do arquivo recebido
+        hash_md5_local = calcular_hash_md5(file_path)
+        print(f"Hash MD5 do arquivo baixado: {hash_md5_local}")
+
+        if hash_md5_servidor == hash_md5_local:
+            print("Verificação concluída com sucesso: os hashes coincidem.\n")
+        else:
+            print("Falha na verificação: os hashes não coincidem.\n")
     except Exception as e:
         print(f"Erro ao receber o arquivo: {e}")
+
 
 def main(argv):
     try:
@@ -81,7 +103,7 @@ def main(argv):
                 nome_arquivo, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
                 nome_arquivo = nome_arquivo.decode()
                 print(f"Cliente deseja enviar o arquivo: {nome_arquivo}")
-                receber_arquivo(UDPServerSocket, endereco, nome_arquivo)
+                receber_arquivo(UDPServerSocket, nome_arquivo)
                 break
 
             elif bytesAddressPair[0].decode() == 'DOWNLOAD':

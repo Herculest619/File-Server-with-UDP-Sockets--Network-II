@@ -66,10 +66,10 @@ def main(argv):
         # Cria o socket UDP
         with socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) as UDPClientSocket:
             
-            opcao = input("\nDeseja baixar ou enviar arquivo? (download/upload): ").lower()
+            opcao = input("\nDeseja baixar ou enviar arquivo?\n 1:DONLOAD \n 2:UPLOAD \n").lower()
             
-            if opcao == 'download':
-                UDPClientSocket.sendto("LIST".encode(), (HOST, PORT))  # Solicita a lista de arquivos
+            if opcao == '1':
+                UDPClientSocket.sendto("DOWNLOAD".encode(), (HOST, PORT))  # Solicita a lista de arquivos
                 # (código para download permanece igual)
                 msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)  # Recebe a mensagem do servidor
                 msg = msgFromServer[0].decode()  # Decodifica a mensagem recebida para uma string
@@ -91,8 +91,18 @@ def main(argv):
 
                 receber_arquivo(UDPClientSocket, file_name)
                 
-            elif opcao == 'upload':
-                file_name = input("\nDigite o nome do arquivo que deseja enviar: ")
+            elif opcao == '2':
+                caminho_atual = os.path.dirname(os.path.abspath(__file__))  # Caminho absoluto do arquivo atual
+                arquivos = os.listdir(caminho_atual)  # Lista de arquivos da pasta atual, usando dicionário
+                arquivos = [arquivo for arquivo in arquivos if not arquivo.endswith('.py')]  # Filtrar arquivos para não listar arquivos .py
+                arquivos = {i: arquivo for i, arquivo in enumerate(arquivos)}  # Adicionar um número identificador para cada arquivo
+                print("\nArquivos disponíveis: ")
+                print(arquivos)
+
+                opcao = input("\nDigite o índice do arquivo a ser enviado: ")
+                opcao = int(opcao)
+                file_name = arquivos[opcao] # Nome do arquivo a ser enviado
+
                 UDPClientSocket.sendto("UPLOAD".encode(), (HOST, PORT))  # Informa o servidor que quer fazer upload
                 UDPClientSocket.sendto(file_name.encode(), (HOST, PORT))  # Envia o nome do arquivo
                 envia_arquivo(UDPClientSocket, file_name)  # Envia o arquivo

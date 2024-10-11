@@ -4,6 +4,29 @@ HOST = '127.0.0.1'  # endereço IP
 PORT = 1999        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1460  # tamanho do buffer para recepção dos dados
 
+def receber_arquivo(UDPClientSocket, file_name):
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_directory, file_name)
+
+    with open(file_path, 'wb') as arquivo:
+                while True:
+                    
+                    msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)
+                    # Simula uma perda de pacote de 5%
+                    if random.random() < 0.95:
+                        data = msgFromServer[0]
+                        arquivo.write(data)
+
+                        # Envia um ACK para o servidor
+                        UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
+
+                        if len(data) < BUFFER_SIZE:
+                            break
+                    else:
+                        print("Falha simula de perda de pacote!")
+
+                print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
+
 def main(argv):
     try:
         # Cria o socket UDP
@@ -27,27 +50,8 @@ def main(argv):
             # Recebe o arquivo, ele virá em partes devido ao tamanho do buffer de 1460 bytes
             opcao = int(opcao)
             file_name = arquivos[opcao]
-            current_directory = os.path.dirname(os.path.abspath(__file__))
-            file_path = os.path.join(current_directory, file_name)
 
-            with open(file_path, 'wb') as arquivo:
-                while True:
-                    
-                    msgFromServer = UDPClientSocket.recvfrom(BUFFER_SIZE)
-                    # Simula uma perda de pacote de 5%
-                    if random.random() < 0.95:
-                        data = msgFromServer[0]
-                        arquivo.write(data)
-
-                        # Envia um ACK para o servidor
-                        UDPClientSocket.sendto("ACK".encode(), (HOST, PORT))
-
-                        if len(data) < BUFFER_SIZE:
-                            break
-                    else:
-                        print("Falha simula de perda de pacote!")
-
-            print(f"\nArquivo '{file_name}' baixado com sucesso!\n")
+            receber_arquivo(UDPClientSocket, file_name)
 
     except Exception as error:
         print("Exceção - Programa será encerrado!")

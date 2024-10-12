@@ -91,7 +91,7 @@ def receber_arquivo(UDPServerSocket, file_name):
 
 def main(argv):
     try:
-        UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) # UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         UDPServerSocket.bind((HOST, PORT))
         print("\nUDP server up and listening")
 

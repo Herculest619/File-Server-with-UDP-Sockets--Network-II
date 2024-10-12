@@ -17,37 +17,40 @@ def calcular_hash_md5(caminho_arquivo):
 
 def envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket):
     try:
-            with open(caminho_arquivo, 'rb') as file:
-                i = 0
+        with open(caminho_arquivo, 'rb') as file:
+            i = 0
+            while True:
+                dados = file.read(BUFFER_SIZE) # Lê os dados do arquivo
+                if not dados:
+                    break
+                # Envia os dados para o cliente com uma probabilidade de 95% de sucesso
                 while True:
-                    dados = file.read(BUFFER_SIZE)
-                    if not dados:
-                        break
-                    while True:
-                        if random.random() < 0.95:
-                            UDPServerSocket.sendto(dados, endereco)
+                    if random.random() < 0.95:
+                        UDPServerSocket.sendto(dados, endereco)
+                    else:
+                        print(f"Falha simulada de envio de pacote {i}")
+                        continue
+
+                    # Recebe o ACK do cliente, em caso de timeout reenvia o pacote
+                    try:
+                        UDPServerSocket.settimeout(TIMEOUT)
+                        ack, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
+                        if ack.decode() == 'ACK':
+                            i += 1
+                            break
                         else:
-                            print(f"Falha simulada de envio de pacote {i}")
-                            continue
+                            print(f"Falha ao receber ACK do pacote {i}")
+                    except socket.timeout:
+                        print(f"Timeout no pacote {i}, reenviando...")
 
-                        try:
-                            UDPServerSocket.settimeout(TIMEOUT)
-                            ack, _ = UDPServerSocket.recvfrom(BUFFER_SIZE)
-                            if ack.decode() == 'ACK':
-                                i += 1
-                                break
-                            else:
-                                print(f"Falha ao receber ACK do pacote {i}")
-                        except socket.timeout:
-                            print(f"Timeout no pacote {i}, reenviando...")
+        print("\nArquivo enviado com sucesso!!")
+        print(f"Foram enviados {i} pacotes\n")
 
-            print("\nArquivo enviado com sucesso!!")
-            print(f"Foram enviados {i} pacotes\n")
+        # Calcular e enviar o hash MD5 do arquivo
+        hash_md5 = calcular_hash_md5(caminho_arquivo)
+        UDPServerSocket.sendto(hash_md5.encode(), endereco)
+        print(f"Hash MD5 do arquivo enviado: {hash_md5}")
 
-            # Calcular e enviar o hash MD5 do arquivo
-            hash_md5 = calcular_hash_md5(caminho_arquivo)
-            UDPServerSocket.sendto(hash_md5.encode(), endereco)
-            print(f"Hash MD5 do arquivo enviado: {hash_md5}")
     except Exception as e:
         print(f"Erro ao enviar o arquivo: {e}") 
 
@@ -91,13 +94,14 @@ def receber_arquivo(UDPServerSocket, file_name):
 
 def main(argv):
     try:
-        UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) # UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        UDPServerSocket.bind((HOST, PORT))
+        UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) # socket.socket(socket.AF_INET, socket.SOCK_DGRAM) é um construtor de objetos de soquete
+        UDPServerSocket.bind((HOST, PORT)) # Associa o socket a um endereço e porta específicos
         print("\nUDP server up and listening")
 
         while True:
-            bytesAddressPair = UDPServerSocket.recvfrom(BUFFER_SIZE)
-            endereco = bytesAddressPair[1]
+            # Recebe dados do soquete. O valor de retorno é um par (bytes, endereço), onde bytes é um objeto de bytes que representa os dados recebidos e endereço é o endereço do soquete enviador.
+            bytesAddressPair = UDPServerSocket.recvfrom(BUFFER_SIZE) 
+            endereco = bytesAddressPair[1] # Endereço do cliente
             
             if bytesAddressPair[0].decode() == 'UPLOAD':
                 print(f"\nCliente conectado: {endereco}")
@@ -127,25 +131,29 @@ def main(argv):
                 clientIP = f"Client IP Address: {endereco}"
                 print("\n" + clientIP)
 
+                # Lê os arquivos disponíveis no diretório do servidor
                 caminho_atual = os.path.dirname(os.path.abspath(__file__))
                 arquivos = os.listdir(caminho_atual)
-                arquivos = [arquivo for arquivo in arquivos if not arquivo.endswith('.py')]
-                arquivos = {i: arquivo for i, arquivo in enumerate(arquivos)}
+                arquivos = [arquivo for arquivo in arquivos if not arquivo.endswith('.py')] # Exclui arquivos .py
+                arquivos = {i: arquivo for i, arquivo in enumerate(arquivos)} # Enumera os arquivos
                 print("\nArquivos disponíveis: ")
                 print(arquivos)
 
-                UDPServerSocket.sendto(str(arquivos).encode(), endereco)
-                bytesAddressPair = UDPServerSocket.recvfrom(BUFFER_SIZE)
-                opcao = int(bytesAddressPair[0].decode())
+                # Envia a lista de arquivos para o cliente
+                UDPServerSocket.sendto(str(arquivos).encode(), endereco) # Envia a lista de arquivos para o cliente
+                bytesAddressPair = UDPServerSocket.recvfrom(BUFFER_SIZE) # Recebe a opção escolhida pelo cliente
+                opcao = int(bytesAddressPair[0].decode()) # Converte a opção para inteiro
                 print(f"\nOpção escolhida pelo cliente: {opcao}")
 
                 arquivo = arquivos[opcao]
                 print(f"\nArquivo escolhido pelo cliente: {arquivo}")
-                caminho_arquivo = os.path.join(caminho_atual, arquivo)
+                caminho_arquivo = os.path.join(caminho_atual, arquivo) # Caminho do arquivo escolhido
                 print(f"\nCaminho do arquivo: {caminho_arquivo}")
 
+                # Função para enviar o arquivo para o cliente
                 envia_arquivo(arquivo, endereco, caminho_arquivo, UDPServerSocket)
                 break
+
     except Exception as error:
         print("Erro na execução do servidor!!")
         print(error)
